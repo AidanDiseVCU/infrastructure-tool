@@ -80,8 +80,67 @@ function subnetHostChecker() {
 
 // ===== PART B: COMPUTE ENVIRONMENT SELECTOR =====
 
+// Application name cannot be blank.
+function askNonEmpty(prompt) {
+  while (true) {
+    const input = readlineSync.question(prompt).trim();
+    if (input !== "") return input;
+    console.log("Invalid input. Please enter a value.");
+  }
+}
+
+// Whole number, 0 or more.
+function askWholeNumber(prompt) {
+  while (true) {
+    const input = readlineSync.question(prompt).trim();
+    if (/^\d+$/.test(input)) {
+      const number = Number(input);
+      if (Number.isSafeInteger(number)) return number;
+    }
+    console.log("Invalid input. Enter a whole number (0 or more).");
+  }
+}
+
+// Dollar amount, 0 or more. A "$" and commas are allowed (example: $1,500.50).
+function askBudget(prompt) {
+  while (true) {
+    const input = readlineSync.question(prompt).trim().replace(/[$,]/g, "");
+    if (/^(\d+\.?\d*|\.\d+)$/.test(input)) return Number(input);
+    console.log("Invalid input. Enter a dollar amount of 0 or more (example: 1500).");
+  }
+}
+
 function computeEnvironmentSelector() {
-  console.log("\nThe Compute Environment Selector is not available yet.");
+  console.log("\n--- Compute Environment Selector ---");
+  const appName = askNonEmpty("Application name: ");
+  const users = askWholeNumber("Monthly users: ");
+  const budget = askBudget("Monthly budget in dollars: ");
+  const highAvailability = askYesNo("High availability required? (yes/no): ");
+
+  // Pick the architecture.
+  let architecture;
+  let usesAutoScaling = false;
+  if (users > 10000 || highAvailability) {
+    architecture = "EC2 + Load Balancer + Auto Scaling";
+    usesAutoScaling = true;
+  } else if (users >= 1000) {
+    architecture = "EC2 + Load Balancer";
+  } else {
+    architecture = "Single EC2";
+  }
+  const needsMoreThanOneEc2 = architecture !== "Single EC2";
+
+  console.log("\nRecommendation");
+  console.log(`Application: ${appName}`);
+  console.log(`Architecture: ${architecture}`);
+
+  // Budget warnings.
+  if (budget < 1000 && needsMoreThanOneEc2) {
+    console.log("WARNING: Your budget is under $1,000, but this architecture needs more than a single EC2.");
+  }
+  if (budget >= 1000 && budget <= 3000 && usesAutoScaling) {
+    console.log("WARNING: Your budget is $1,000-$3,000, but this architecture requires Auto Scaling.");
+  }
 }
 
 // ===== MAIN PROGRAM =====
